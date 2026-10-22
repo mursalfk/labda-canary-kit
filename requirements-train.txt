@@ -1,0 +1,4 @@
+# lambda-canary-kit/requirements-train.txt
+# Only needed to retrain the model. The trained files are already committed.
+-r requirements-dev.txt
+skl2onnx==1.20.0

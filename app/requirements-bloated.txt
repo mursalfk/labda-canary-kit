@@ -1,0 +1,14 @@
+# lambda-canary-kit/app/requirements-bloated.txt
+# What the deliberately heavy image installs (scikit-learn + pandas "just in case").
+# Exact pins from a clean resolve on 2026-10-16. scikit-learn must match the version
+# that trained digits.joblib, because pickles are not portable across versions.
+scikit-learn==1.9.1
+scipy==1.18.1
+pandas==3.0.6
+numpy==2.5.4
+joblib==1.6.0
+threadpoolctl==3.7.0
+cloudpickle==3.1.2
+narwhals==2.27.1
+python-dateutil==2.9.0.post0
+six==1.17.0

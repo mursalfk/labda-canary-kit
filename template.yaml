@@ -1,0 +1,69 @@
+# lambda-canary-kit/template.yaml
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Digit classifier Lambda (container image) with a canary release and automatic rollback.
+
+Parameters:
+  ImageUri:
+    Type: String
+    Description: Full ECR image URI including the tag, produced by tools/deploy.py
+  Release:
+    Type: String
+    Default: dev
+    Description: Label returned in every reply, so you can see which release answered
+  DeployType:
+    Type: String
+    Default: Canary10Percent5Minutes
+    AllowedValues:
+      - Canary10Percent5Minutes
+      - Canary10Percent10Minutes
+      - Linear10PercentEvery1Minute
+      - AllAtOnce
+
+Resources:
+  ClassifierFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      ImageUri: !Ref ImageUri
+      Architectures:
+        - x86_64
+      MemorySize: 512
+      Timeout: 10
+      AutoPublishAlias: live
+      Environment:
+        Variables:
+          RELEASE: !Ref Release
+      DeploymentPreference:
+        Type: !Ref DeployType
+        Alarms:
+          - !Ref CanaryErrorsAlarm
+
+  # Watches only the version CodeDeploy is currently shifting traffic to.
+  # Any error in two consecutive minutes counts as a bad release and triggers rollback.
+  CanaryErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Errors on the new Lambda version during a canary deployment
+      Namespace: AWS/Lambda
+      MetricName: Errors
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      Dimensions:
+        - Name: Resource
+          Value: !Sub "${ClassifierFunction}:live"
+        - Name: FunctionName
+          Value: !Ref ClassifierFunction
+        - Name: ExecutedVersion
+          Value: !GetAtt ClassifierFunction.Version.Version
+
+Outputs:
+  FunctionName:
+    Description: Pass this to tools/traffic.py
+    Value: !Ref ClassifierFunction
+  AliasArn:
+    Value: !Ref ClassifierFunction.Alias

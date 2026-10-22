@@ -1,0 +1,18 @@
+# lambda-canary-kit/docker/Dockerfile.bloated
+# The "it works on my laptop" image. Every choice here is deliberate and common in the wild:
+#  - build tools installed and never removed
+#  - package manager caches kept
+#  - the whole repository copied in "just in case"
+#  - scikit-learn, scipy and pandas installed to serve a 3 KB linear model
+FROM public.ecr.aws/lambda/python:3.12
+
+RUN microdnf install -y gcc gcc-c++ make git
+
+COPY app/requirements-bloated.txt /tmp/requirements-bloated.txt
+RUN pip install -r /tmp/requirements-bloated.txt
+
+COPY . ${LAMBDA_TASK_ROOT}/project/
+COPY app/ ${LAMBDA_TASK_ROOT}/
+
+ENV BACKEND=sklearn
+CMD ["handler.handler"]

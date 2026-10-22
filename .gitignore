@@ -1,0 +1,14 @@
+# lambda-canary-kit/.gitignore
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+.aws-sam/
+samconfig.toml
+.env
+.agents/
+image/
+images/
+*.zip
+evidence/

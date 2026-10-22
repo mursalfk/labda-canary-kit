@@ -1,0 +1,19 @@
+# lambda-canary-kit/docker/Dockerfile.slim
+# Same service, same API, same model, as little image as possible.
+#  - multi-stage: pip runs in a throwaway stage, the final stage only receives the result
+#  - only onnxruntime + numpy (no scikit-learn, scipy or pandas)
+#  - no pip cache, no compilers, no bytecode caches, no test folders
+#    (stripped with python, because the Lambda base image has no `find`)
+#  - only the four runtime files and the 4 KB model are copied
+FROM public.ecr.aws/lambda/python:3.12 AS builder
+COPY app/requirements-slim.txt /tmp/requirements-slim.txt
+RUN pip install --no-cache-dir --target /deps -r /tmp/requirements-slim.txt \
+ && python -c "import pathlib, shutil; [shutil.rmtree(p, ignore_errors=True) for n in ('__pycache__', 'tests') for p in list(pathlib.Path('/deps').rglob(n)) if p.is_dir()]"
+
+FROM public.ecr.aws/lambda/python:3.12
+COPY --from=builder /deps ${LAMBDA_TASK_ROOT}
+COPY app/handler.py app/backends.py app/preprocess.py ${LAMBDA_TASK_ROOT}/
+COPY app/model/digits.onnx ${LAMBDA_TASK_ROOT}/model/digits.onnx
+
+ENV BACKEND=onnx
+CMD ["handler.handler"]

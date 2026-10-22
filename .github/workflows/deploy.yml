@@ -1,0 +1,30 @@
+# lambda-canary-kit/.github/workflows/deploy.yml
+# Manual release button. Uses GitHub's OIDC token to assume an AWS role, so no access keys are stored.
+# One-time setup (role, trust policy, repo variables) is in instructions.md, step 9.
+name: deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Release label, e.g. v2
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: aws-actions/setup-sam@v2
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+      - run: python tools/deploy.py --release "${{ inputs.release }}" --region "${{ vars.AWS_REGION }}"

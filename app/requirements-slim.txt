@@ -1,0 +1,7 @@
+# lambda-canary-kit/app/requirements-slim.txt
+# What the slim image installs. Exact pins from a clean resolve on 2026-10-16.
+numpy==2.5.4
+onnxruntime==1.31.0
+flatbuffers==25.12.19
+packaging==26.3
+protobuf==7.36.2

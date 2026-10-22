@@ -1,0 +1,45 @@
+# lambda-canary-kit/.github/workflows/ci.yml
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            app/requirements-*.txt
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q
+
+  image-gates:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the slim image
+        run: docker build -f docker/Dockerfile.slim -t canary-kit:slim .
+      - name: Size gate
+        env:
+          BUDGET: ${{ vars.SIZE_BUDGET_MB }}
+        run: |
+          if [ -z "$BUDGET" ]; then echo "Set the repository variable SIZE_BUDGET_MB (see instructions.md, step 5)"; exit 1; fi
+          python tools/size_gate.py canary-kit:slim --budget-mb "$BUDGET"
+      - name: Cold-start smoke test
+        env:
+          BUDGET: ${{ vars.COLD_START_BUDGET_MS }}
+        run: |
+          if [ -z "$BUDGET" ]; then echo "Set the repository variable COLD_START_BUDGET_MS (see instructions.md, step 5)"; exit 1; fi
+          python tools/cold_start_smoke.py canary-kit:slim --max-cold-ms "$BUDGET"

@@ -1,0 +1,10 @@
+# lambda-canary-kit/.dockerignore
+.git
+.github
+**/__pycache__
+.pytest_cache
+.venv
+venv
+*.zip
+docs
+evidence
